@@ -245,12 +245,16 @@
 
             // Create monthly summary table
             const monthlyTable = document.createElement('table');
-            monthlyTable.innerHTML = '<tr><th>Month</th><th>kWe sold</th><th>Income</th><th>Revenue</th><th>Break-even</th></tr>';
+            monthlyTable.innerHTML = '<tr><th>Month</th><th>kWe sold</th><th>Gas cost</th><th>Income</th><th>Revenue</th><th>Break-even</th></tr>';
             
             const monthlyIncome = Array(12).fill(0);
             const monthlyRevenue = Array(12).fill(0);
             const monthlyBreakeven = Array(12).fill(0);
             const hoursAboveMinPricePerMonth = Array(12).fill(0);
+            const monthlyGasCost = Array(12).fill(0);
+            
+            const gasPrice = parseFloat(document.getElementById('gasPrice').value);
+            const consumption = parseFloat(document.getElementById('consumptionResult').textContent);
             const daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
             let dayCounter = 0;
 
@@ -277,8 +281,10 @@
                             hoursCount++;
                             hoursAboveMinPricePerMonth[monthIndex]++;
                             const hourIncome = ((price - mwePrice)/1000) * kweValue;
+                            const hourGasCost = consumption * gasPrice;
                             totalIncome += hourIncome;
                             monthlyIncome[monthIndex] += hourIncome;
+                            monthlyGasCost[monthIndex] += hourGasCost;
                         }
                     });
                     
@@ -296,12 +302,14 @@
                 const monthName = new Date(2024, index).toLocaleString('default', { month: 'long' });
                 const revenue = monthlyRevenue[index];
                 const breakeven = monthlyBreakeven[index];
-                const monthlyWorkingHours = hoursAboveMinPricePerMonth[index] || 0;
-                const kWeSold = kweValue * monthlyWorkingHours;
+                const monthWorkingHours = hoursAboveMinPricePerMonth[index] || 0;
+                const kWeSold = kweValue * monthWorkingHours;
+                const gasCost = monthlyGasCost[index];
                 monthlyTable.innerHTML += `
                     <tr>
                         <td>${monthName}</td>
                         <td>${kWeSold.toFixed(2)}</td>
+                        <td style="color: green">+${gasCost.toFixed(2)}</td>
                         <td>${income.toFixed(2)}</td>
                         <td style="color: ${revenue >= 0 ? 'green' : 'red'}">${revenue.toFixed(2)}</td>
                         <td style="color: ${breakeven <= 0 ? 'green' : 'red'}">${breakeven <= 0 ? '+' : '-'}${Math.abs(breakeven).toFixed(2)}</td>
