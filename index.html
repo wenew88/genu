@@ -299,7 +299,7 @@
                         <td>${monthName}</td>
                         <td>${income.toFixed(2)}</td>
                         <td style="color: ${revenue >= 0 ? 'green' : 'red'}">${revenue.toFixed(2)}</td>
-                        <td style="color: ${breakeven <= 0 ? 'green' : 'red'}">${breakeven.toFixed(2)}</td>
+                        <td style="color: ${breakeven <= 0 ? 'green' : 'red'}">${breakeven <= 0 ? '+' : '-'}${Math.abs(breakeven).toFixed(2)}</td>
                     </tr>`;
             });
 
