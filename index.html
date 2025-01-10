@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="uk">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Панель управління електростанцією</title>
+    <title>Power Plant Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         body { font-family: Arial; margin: 20px; background: #f5f5f5; }
@@ -11,6 +11,8 @@
         .section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
         label { display: inline-block; width: 200px; font-weight: bold; }
         input { padding: 5px; width: 150px; margin-bottom: 10px; }
+        select { padding: 5px; width: 200px; margin-bottom: 10px; font-size: 14px; }
+        input[readonly] { background-color: #f5f5f5; }
         table { border-collapse: collapse; width: 100%; font-size: 12px; }
         th, td { border: 1px solid #ddd; padding: 4px; text-align: right; }
         .highlighted { background-color: #90EE90; }
@@ -25,92 +27,100 @@
 </head>
 <body>
     <div class="container">
-        <h2>Змінні</h2>
+        <h2>Variables</h2>
         <div class="section">
             <div>
-                <label>Кількість двигунів:</label>
+                <label>Number of Engines:</label>
                 <input type="number" id="engineCount" value="1" min="1">
             </div>
             <div>
-                <label>Газовий двигун (кВт):</label>
-                <input type="number" id="gasEngine" value="315">
+                <label>Engine type:</label>
+                <select id="engineType" onchange="updateEngineValues()">
+                    <option value="wartsila">Wärtsilä W16V25SG (3000 kWe)</option>
+                    <option value="dha" selected>DHA (315 kWe)</option>
+                    <option value="jenbacher">Jenbacher 612 (2200 kWe)</option>
+                </select>
             </div>
             <div>
-                <label>Споживання газу (м³):</label>
+                <label>Gas Engine (kWe):</label>
+                <input type="number" id="gasEngine" value="315" readonly>
+            </div>
+            <div>
+                <label>NG consumption (m³):</label>
                 <input type="number" id="ngConsumption" value="84">
             </div>
             <div>
-                <label>Навантаження (%):</label>
+                <label>Load (%):</label>
                 <input type="number" id="loadPercentage" value="0.9" step="0.1" max="1">
             </div>
             <div>
-                <label>Ціна газу (за м³):</label>
+                <label>Gas price (per m³):</label>
                 <input type="number" id="gasPrice" value="16.5">
             </div>
         </div>
 
-        <h2>Результати</h2>
+        <h2>Results</h2>
         <div class="section">
             <div>
-                <label>Генерація кВт:</label>
+                <label>Generation kWe:</label>
                 <span id="kweResult">0</span>
             </div>
             <div>
-                <label>Споживання (м³):</label>
+                <label>Consumption (m³):</label>
                 <span id="consumptionResult">0</span>
             </div>
             <div>
-                <label>Ціна 1 кВт:</label>
+                <label>1 kWe price:</label>
                 <span id="kWePriceResult">0</span>
             </div>
             <div>
-                <label>Ціна 1 МВт:</label>
+                <label>1 MWe price:</label>
                 <span id="mWePriceResult">0</span>
             </div>
         </div>
 
-        <h2>Щомісячні витрати</h2>
+        <h2>Monthly Spending</h2>
         <div class="section">
             <div>
-                <label>Мастило:</label>
+                <label>Oil:</label>
                 <input type="number" id="oilCost" value="32800">
             </div>
             <div>
-                <label>Обслуговування та запчастини:</label>
+                <label>Service and parts:</label>
                 <input type="number" id="serviceCost" value="41000">
             </div>
             <div>
-                <label>Працівники (3):</label>
+                <label>Workers (3):</label>
                 <input type="number" id="workersCost" value="49200">
             </div>
             <div>
-                <label>Податки із зарплати (22%):</label>
+                <label>Salary taxes (22%):</label>
                 <input type="number" id="taxCost" value="10824">
             </div>
             <div>
-                <label>Інші витрати:</label>
+                <label>Other expenses:</label>
                 <input type="number" id="otherCost" value="61500">
             </div>
             <div class="results">
-                <label>Загальні щомісячні витрати:</label>
+                <label>Total Monthly Spending:</label>
                 <span id="totalSpending">0</span>
             </div>
         </div>
 
-        <h2>Аналіз цін</h2>
+        <h2>Price Analysis</h2>
         <div class="section">
             <div>
-                <label>Мінімальна ціна:</label>
+                <label>Minimum Price:</label>
                 <input type="number" id="minPrice" value="5000" onchange="updateAnalysis()">
             </div>
 
             <div class="results">
-                <div>Годин вище мінімальної ціни: <span id="hourCount">0</span></div>
-                <div>Загальний дохід: <span id="totalIncome">0</span></div>
-                <div>Річний прибуток (після витрат): <span id="totalRevenue">0</span></div>
+                <div>Hours above minimum price: <span id="hourCount">0</span></div>
+                <div>Total Income: <span id="totalIncome">0</span></div>
+                <div>Annual Revenue (after expenses): <span id="totalRevenue">0</span></div>
             </div>
 
-            <div id="loading">Завантаження даних про ціни...</div>
+            <div id="loading">Loading price data...</div>
             
             <div class="monthly-summary">
                 <!-- Monthly summary table will be inserted here -->
@@ -126,10 +136,28 @@
 
     <script>
         let priceData = [];
-        const monthNames = [
-            'Січень', 'Лютий', 'Березень', 'Квітень', 'Травень', 'Червень', 
-            'Липень', 'Серпень', 'Вересень', 'Жовтень', 'Листопад', 'Грудень'
-        ];
+
+        // Engine specifications
+        const engineSpecs = {
+            wartsila: {
+                power: 3000,
+                name: "Wärtsilä W16V25SG"
+            },
+            dha: {
+                power: 315,
+                name: "DHA"
+            },
+            jenbacher: {
+                power: 2200,
+                name: "Jenbacher 612"
+            }
+        };
+
+        function updateEngineValues() {
+            const selectedEngine = document.getElementById('engineType').value;
+            document.getElementById('gasEngine').value = engineSpecs[selectedEngine].power;
+            calculateResults();
+        }
 
         async function loadPriceData() {
             document.getElementById('loading').style.display = 'block';
@@ -144,8 +172,8 @@
                 updateAnalysis();
                 document.getElementById('loading').style.display = 'none';
             } catch (error) {
-                console.error('Помилка завантаження CSV:', error);
-                document.getElementById('loading').textContent = 'Помилка завантаження даних про ціни';
+                console.error('Error loading CSV:', error);
+                document.getElementById('loading').textContent = 'Error loading price data';
             }
         }
 
@@ -156,11 +184,13 @@
             const loadPercentage = parseFloat(document.getElementById('loadPercentage').value);
             const gasPrice = parseFloat(document.getElementById('gasPrice').value);
 
+            // Calculate results
             const kwe = gasEngine * loadPercentage * engineCount;
             const consumption = ngConsumption * loadPercentage * engineCount;
             const kwePrice = (ngConsumption * gasPrice) / gasEngine;
             const mwePrice = kwePrice * 1000;
 
+            // Update display
             document.getElementById('kweResult').textContent = kwe.toFixed(2);
             document.getElementById('consumptionResult').textContent = consumption.toFixed(2);
             document.getElementById('kWePriceResult').textContent = kwePrice.toFixed(2);
@@ -195,7 +225,7 @@
 
             // Create monthly summary table
             const monthlyTable = document.createElement('table');
-            monthlyTable.innerHTML = '<tr><th>Місяць</th><th>Дохід</th><th>Прибуток</th></tr>';
+            monthlyTable.innerHTML = '<tr><th>Month</th><th>Income</th><th>Revenue</th></tr>';
             
             const monthlyIncome = Array(12).fill(0);
             const monthlyRevenue = Array(12).fill(0);
@@ -205,7 +235,7 @@
             // Create price table
             const priceTable = document.createElement('table');
             const headerRow = document.createElement('tr');
-            headerRow.innerHTML = '<th>День</th>' + Array.from({length: 24}, (_, i) => `<th>${i+1}</th>`).join('');
+            headerRow.innerHTML = '<th>Day</th>' + Array.from({length: 24}, (_, i) => `<th>${i+1}</th>`).join('');
             priceTable.appendChild(headerRow);
 
             // Process each day
@@ -238,7 +268,7 @@
 
             // Update monthly summary table
             monthlyIncome.forEach((income, index) => {
-                const monthName = monthNames[index];
+                const monthName = new Date(2024, index).toLocaleString('default', { month: 'long' });
                 const revenue = monthlyRevenue[index];
                 monthlyTable.innerHTML += `
                     <tr>
@@ -252,7 +282,7 @@
             const annualRevenue = monthlyRevenue.reduce((sum, revenue) => sum + revenue, 0);
 
             // Update display
-            document.querySelector('.monthly-summary').innerHTML = '<h3>Щомісячний підсумок доходів</h3>';
+            document.querySelector('.monthly-summary').innerHTML = '<h3>Monthly Income Summary</h3>';
             document.querySelector('.monthly-summary').appendChild(monthlyTable);
             
             document.getElementById('priceTable').innerHTML = '';
