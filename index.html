@@ -337,9 +337,7 @@
             // Calculate totals
             const annualRevenue = monthlyRevenue.reduce((sum, revenue) => sum + revenue, 0);
             const totalVAT = monthlyNetVAT.reduce((sum, vat) => sum + vat, 0);
-            const reInvestment = monthlyBreakeven
-                .filter(breakeven => breakeven <= 0)  // Only positive results (negative breakeven)
-                .reduce((sum, breakeven) => sum + Math.abs(breakeven), 0);
+            const reInvestment = monthlyBreakeven[11]; // December's break-even value
 
             // Update display
             document.querySelector('.monthly-summary').innerHTML = '<h3>Monthly Income Summary</h3>';
@@ -352,7 +350,7 @@
             document.getElementById('totalIncome').textContent = totalIncome.toFixed(2);
             document.getElementById('totalRevenue').textContent = annualRevenue.toFixed(2);
             document.getElementById('totalVAT').textContent = `${totalVAT >= 0 ? '+' : '-'}${Math.abs(totalVAT).toFixed(2)}`;
-            document.getElementById('reInvestment').textContent = `+${reInvestment.toFixed(2)}`;
+            document.getElementById('reInvestment').textContent = reInvestment <= 0 ? `+${Math.abs(reInvestment).toFixed(2)}` : '0.00';
         }
 
         // Add event listeners
