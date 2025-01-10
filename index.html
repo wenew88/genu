@@ -12,7 +12,6 @@
         label { display: inline-block; width: 200px; font-weight: bold; }
         input { padding: 5px; width: 150px; margin-bottom: 10px; }
         select { padding: 5px; width: 200px; margin-bottom: 10px; font-size: 14px; }
-        input[readonly] { background-color: #f5f5f5; }
         table { border-collapse: collapse; width: 100%; font-size: 12px; }
         th, td { border: 1px solid #ddd; padding: 4px; text-align: right; }
         .highlighted { background-color: #90EE90; }
@@ -43,11 +42,15 @@
             </div>
             <div>
                 <label>Gas Engine (kWe):</label>
-                <input type="number" id="gasEngine" value="315" readonly>
+                <input type="number" id="gasEngine" value="315">
+            </div>
+            <div>
+                <label>Engine price:</label>
+                <input type="number" id="enginePrice" value="2000000">
             </div>
             <div>
                 <label>NG consumption (m³):</label>
-                <input type="number" id="ngConsumption" value="84" readonly>
+                <input type="number" id="ngConsumption" value="84">
             </div>
             <div>
                 <label>Load (%):</label>
@@ -68,6 +71,10 @@
             <div>
                 <label>Consumption (m³):</label>
                 <span id="consumptionResult">0</span>
+            </div>
+            <div>
+                <label>Investment+20%:</label>
+                <span id="investmentResult">0</span>
             </div>
             <div>
                 <label>1 kWe price:</label>
@@ -137,22 +144,25 @@
     <script>
         let priceData = [];
 
-        // Updated engine specifications with NG consumption
+        // Updated engine specifications with NG consumption and prices
         const engineSpecs = {
             wartsila: {
                 power: 3000,
                 name: "Wärtsilä W16V25SG",
-                ngConsumption: 777
+                ngConsumption: 777,
+                price: 6000000
             },
             dha: {
                 power: 315,
                 name: "DHA",
-                ngConsumption: 84
+                ngConsumption: 84,
+                price: 2000000
             },
             jenbacher: {
                 power: 2200,
                 name: "Jenbacher 612",
-                ngConsumption: 444.30
+                ngConsumption: 444.30,
+                price: 5000000
             }
         };
 
@@ -160,6 +170,7 @@
             const selectedEngine = document.getElementById('engineType').value;
             document.getElementById('gasEngine').value = engineSpecs[selectedEngine].power;
             document.getElementById('ngConsumption').value = engineSpecs[selectedEngine].ngConsumption;
+            document.getElementById('enginePrice').value = engineSpecs[selectedEngine].price;
             calculateResults();
         }
 
@@ -185,18 +196,21 @@
             const engineCount = parseFloat(document.getElementById('engineCount').value);
             const gasEngine = parseFloat(document.getElementById('gasEngine').value);
             const ngConsumption = parseFloat(document.getElementById('ngConsumption').value);
+            const enginePrice = parseFloat(document.getElementById('enginePrice').value);
             const loadPercentage = parseFloat(document.getElementById('loadPercentage').value);
             const gasPrice = parseFloat(document.getElementById('gasPrice').value);
 
             // Calculate results
             const kwe = gasEngine * loadPercentage * engineCount;
             const consumption = ngConsumption * loadPercentage * engineCount;
+            const investment = enginePrice * engineCount * 1.2; // Adding 20%
             const kwePrice = (ngConsumption * gasPrice) / gasEngine;
             const mwePrice = kwePrice * 1000;
 
             // Update display
             document.getElementById('kweResult').textContent = kwe.toFixed(2);
             document.getElementById('consumptionResult').textContent = consumption.toFixed(2);
+            document.getElementById('investmentResult').textContent = investment.toFixed(2);
             document.getElementById('kWePriceResult').textContent = kwePrice.toFixed(2);
             document.getElementById('mWePriceResult').textContent = mwePrice.toFixed(2);
 
@@ -223,16 +237,19 @@
             const mwePrice = parseFloat(document.getElementById('mWePriceResult').textContent);
             const kweValue = parseFloat(document.getElementById('kweResult').textContent);
             const monthlySpending = parseFloat(document.getElementById('totalSpending').textContent);
+            const totalInvestment = parseFloat(document.getElementById('investmentResult').textContent);
             
             let hoursCount = 0;
             let totalIncome = 0;
+            let cumulativeRevenue = 0;
 
             // Create monthly summary table
             const monthlyTable = document.createElement('table');
-            monthlyTable.innerHTML = '<tr><th>Month</th><th>Income</th><th>Revenue</th></tr>';
+            monthlyTable.innerHTML = '<tr><th>Month</th><th>Income</th><th>Revenue</th><th>Break-even</th></tr>';
             
             const monthlyIncome = Array(12).fill(0);
             const monthlyRevenue = Array(12).fill(0);
+            const monthlyBreakeven = Array(12).fill(0);
             const daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
             let dayCounter = 0;
 
@@ -266,19 +283,23 @@
                     priceTable.appendChild(row);
                     dayCounter++;
                 }
-                // Calculate monthly revenue
+                // Calculate monthly revenue and break-even
                 monthlyRevenue[monthIndex] = monthlyIncome[monthIndex] - monthlySpending;
+                cumulativeRevenue += monthlyRevenue[monthIndex];
+                monthlyBreakeven[monthIndex] = totalInvestment - cumulativeRevenue;
             });
 
-            // Update monthly summary table
+            // Update monthly summary table with break-even column
             monthlyIncome.forEach((income, index) => {
                 const monthName = new Date(2024, index).toLocaleString('default', { month: 'long' });
                 const revenue = monthlyRevenue[index];
+                const breakeven = monthlyBreakeven[index];
                 monthlyTable.innerHTML += `
                     <tr>
                         <td>${monthName}</td>
                         <td>${income.toFixed(2)}</td>
                         <td style="color: ${revenue >= 0 ? 'green' : 'red'}">${revenue.toFixed(2)}</td>
+                        <td style="color: ${breakeven <= 0 ? 'green' : 'red'}">${breakeven.toFixed(2)}</td>
                     </tr>`;
             });
 
