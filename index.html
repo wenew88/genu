@@ -47,7 +47,7 @@
             </div>
             <div>
                 <label>NG consumption (m³):</label>
-                <input type="number" id="ngConsumption" value="84">
+                <input type="number" id="ngConsumption" value="84" readonly>
             </div>
             <div>
                 <label>Load (%):</label>
@@ -137,25 +137,29 @@
     <script>
         let priceData = [];
 
-        // Engine specifications
+        // Updated engine specifications with NG consumption
         const engineSpecs = {
             wartsila: {
                 power: 3000,
-                name: "Wärtsilä W16V25SG"
+                name: "Wärtsilä W16V25SG",
+                ngConsumption: 777
             },
             dha: {
                 power: 315,
-                name: "DHA"
+                name: "DHA",
+                ngConsumption: 84
             },
             jenbacher: {
                 power: 2200,
-                name: "Jenbacher 612"
+                name: "Jenbacher 612",
+                ngConsumption: 444.30
             }
         };
 
         function updateEngineValues() {
             const selectedEngine = document.getElementById('engineType').value;
             document.getElementById('gasEngine').value = engineSpecs[selectedEngine].power;
+            document.getElementById('ngConsumption').value = engineSpecs[selectedEngine].ngConsumption;
             calculateResults();
         }
 
