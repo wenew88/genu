@@ -214,28 +214,29 @@
         async function loadPriceData() {
             document.getElementById('loading').style.display = 'block';
             try {
+                // Load the CSV file
                 const response = await window.fs.readFile('d24.csv', { encoding: 'utf8' });
                 const result = Papa.parse(response, {
                     header: false,
                     dynamicTyping: true,
                     skipEmptyLines: true,
-                    delimiter: ',',
-                    complete: function(results) {
-                        if (results.errors.length > 0) {
-                            console.error('CSV parsing errors:', results.errors);
-                        }
-                        priceData = results.data;
-                        updateAnalysis();
-                        document.getElementById('loading').style.display = 'none';
-                    },
-                    error: function(error) {
-                        console.error('CSV parsing error:', error);
-                        document.getElementById('loading').textContent = 'Error parsing CSV data';
-                    }
+                    delimiter: ','
                 });
+
+                if (result.errors.length > 0) {
+                    console.error('CSV parsing errors:', result.errors);
+                }
+
+                // Store the loaded data
+                priceData = result.data;
+                console.log('Loaded rows:', priceData.length);
+                console.log('Sample first row:', priceData[0]);
+
+                updateAnalysis();
+                document.getElementById('loading').style.display = 'none';
             } catch (error) {
                 console.error('Error loading CSV:', error);
-                document.getElementById('loading').textContent = 'Error loading CSV file';
+                document.getElementById('loading').textContent = 'Error loading price data';
             }
         }
 
@@ -297,12 +298,133 @@
 
         function updateAnalysis() {
             if (!priceData || priceData.length === 0) {
-                console.log('Initializing price data');
-                priceData = Array(365).fill().map(() => Array(24).fill(100));
+                console.log('No price data available');
+                return;
             }
 
             const minPrice = parseFloat(document.getElementById('minPrice').value);
             const mwePrice = parseFloat(document.getElementById('mWePriceResult').textContent);
+            const kweValue = parseFloat(document.getElementById('kweResult').textContent);
+            const monthlySpending = parseFloat(document.getElementById('totalSpending').textContent);
+            
+            let hoursCount = 0;
+            let totalIncome = 0;
+
+            // Initialize arrays for monthly calculations
+            const monthlyIncome = Array(12).fill(0);
+            const monthlyRevenue = Array(12).fill(0);
+            const monthlyBreakeven = Array(12).fill(0);
+            const monthlyNetVAT = Array(12).fill(0);
+            const hoursAboveMinPricePerMonth = Array(12).fill(0);
+            const monthlyGasCost = Array(12).fill(0);
+            const monthlyGasVAT = Array(12).fill(0);
+            const monthlyElectricityVAT = Array(12).fill(0);
+            
+            // Days in each month (for proper distribution of days)
+            const daysPerMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+            let dayCounter = 0;
+
+            // Create monthly summary table
+            const monthlyTable = document.createElement('table');
+            monthlyTable.innerHTML = '<tr><th>Month</th><th>kWe sold</th><th>Gas cost</th><th>Gas VAT</th><th>Electricity VAT</th><th>Net VAT</th><th>Income</th><th>Revenue</th><th>Break-even</th></tr>';
+
+            // Create price table
+            const priceTable = document.createElement('table');
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = '<th>Day</th>' + Array.from({length: 24}, (_, i) => `<th>${i+1}</th>`).join('');
+            priceTable.appendChild(headerRow);
+
+            // Process each day and calculate monthly totals
+            let cumulativeRevenue = 0;
+            daysPerMonth.forEach((days, monthIndex) => {
+                for(let day = 0; day < days; day++) {
+                    if (dayCounter >= priceData.length) break;
+                    
+                    const dayPrices = priceData[dayCounter];
+                    const row = document.createElement('tr');
+                    row.innerHTML = `<td>${dayCounter + 1}</td>`;
+                    
+                    // Process each hour
+                    dayPrices.forEach((price, hour) => {
+                        const isHighlighted = price > minPrice;
+                        row.innerHTML += `<td class="${isHighlighted ? 'highlighted' : ''}">${price}</td>`;
+                        
+                        if (isHighlighted) {
+                            hoursCount++;
+                            hoursAboveMinPricePerMonth[monthIndex]++;
+                            const hourIncome = ((price - mwePrice)/1000) * kweValue;
+                            const hourGasCost = parseFloat(document.getElementById('ngConsumption').value) * 
+                                              parseFloat(document.getElementById('gasPrice').value);
+                            
+                            totalIncome += hourIncome;
+                            monthlyIncome[monthIndex] += hourIncome;
+                            monthlyGasCost[monthIndex] += hourGasCost;
+                            
+                            // Calculate VAT
+                            const hourGasVAT = hourGasCost * 0.2;
+                            const hourElectricityVAT = hourIncome * 0.2;
+                            monthlyGasVAT[monthIndex] += hourGasVAT;
+                            monthlyElectricityVAT[monthIndex] += hourElectricityVAT;
+                            monthlyNetVAT[monthIndex] = monthlyGasVAT[monthIndex] - monthlyElectricityVAT[monthIndex];
+                        }
+                    });
+                    
+                    priceTable.appendChild(row);
+                    dayCounter++;
+                }
+                
+                // Calculate monthly revenue and break-even
+                monthlyRevenue[monthIndex] = monthlyIncome[monthIndex] - monthlySpending;
+                cumulativeRevenue += monthlyRevenue[monthIndex];
+                monthlyBreakeven[monthIndex] = (parseFloat(document.getElementById('enginePrice').value) * 
+                                              parseFloat(document.getElementById('engineCount').value) * 1.2) - cumulativeRevenue;
+            });
+
+            // Update monthly summary table
+            monthlyIncome.forEach((income, index) => {
+                const monthName = new Date(2024, index).toLocaleString('default', { month: 'long' });
+                const workingHours = hoursAboveMinPricePerMonth[index];
+                const kWeSold = kweValue * workingHours;
+                const gasCost = monthlyGasCost[index];
+                const gasVAT = monthlyGasVAT[index];
+                const electricityVAT = monthlyElectricityVAT[index];
+                const netVAT = monthlyNetVAT[index];
+                const revenue = monthlyRevenue[index];
+                const breakeven = monthlyBreakeven[index];
+
+                monthlyTable.innerHTML += `
+                    <tr>
+                        <td>${monthName}</td>
+                        <td>${kWeSold.toFixed(2)}</td>
+                        <td>${gasCost.toFixed(2)}</td>
+                        <td style="color: green">+${gasVAT.toFixed(2)}</td>
+                        <td style="color: red">-${electricityVAT.toFixed(2)}</td>
+                        <td style="color: ${netVAT >= 0 ? 'green' : 'red'}">${netVAT >= 0 ? '+' : '-'}${Math.abs(netVAT).toFixed(2)}</td>
+                        <td>${income.toFixed(2)}</td>
+                        <td style="color: ${revenue >= 0 ? 'green' : 'red'}">${revenue.toFixed(2)}</td>
+                        <td style="color: ${breakeven <= 0 ? 'green' : 'red'}">${breakeven <= 0 ? '+' : '-'}${Math.abs(breakeven).toFixed(2)}</td>
+                    </tr>`;
+            });
+
+            // Update display
+            document.querySelector('.monthly-summary').innerHTML = '<h3>Monthly Income Summary</h3>';
+            document.querySelector('.monthly-summary').appendChild(monthlyTable);
+            
+            document.getElementById('priceTable').innerHTML = '';
+            document.getElementById('priceTable').appendChild(priceTable);
+            
+            // Calculate and update totals
+            const annualRevenue = monthlyRevenue.reduce((sum, revenue) => sum + revenue, 0);
+            const totalVAT = monthlyNetVAT.reduce((sum, vat) => sum + vat, 0);
+            const reInvestment = monthlyBreakeven[11]; // December's break-even value
+            
+            document.getElementById('hourCount').textContent = hoursCount;
+            document.getElementById('totalIncome').textContent = totalIncome.toFixed(2);
+            document.getElementById('totalRevenue').textContent = annualRevenue.toFixed(2);
+            document.getElementById('totalVAT').style.color = totalVAT >= 0 ? 'green' : 'red';
+            document.getElementById('totalVAT').textContent = `${totalVAT >= 0 ? '+' : '-'}${Math.abs(totalVAT).toFixed(2)}`;
+            document.getElementById('reInvestment').textContent = reInvestment <= 0 ? `+${Math.abs(reInvestment).toFixed(2)}` : '0.00';
+        }
             const kweValue = parseFloat(document.getElementById('kweResult').textContent);
             const monthlySpending = parseFloat(document.getElementById('totalSpending').textContent);
             const totalInvestment = parseFloat(document.getElementById('investmentResult').textContent);
