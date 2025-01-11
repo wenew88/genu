@@ -125,11 +125,8 @@
                 <div>Hours above minimum price: <span id="hourCount">0</span></div>
                 <div>Total Income: <span id="totalIncome">0</span></div>
                 <div>Annual Revenue (after expenses): <span id="totalRevenue">0</span></div>
-                <div>Total VAT: <span id="totalVAT" style="color: ${totalVAT >= 0 ? 'green' : 'red'}">0</span></div>
+                <div>Total VAT: <span id="totalVAT" style="color: green">0</span></div>
                 <div>Re-Investment: <span id="reInvestment" style="color: green">0</span></div>
-                <div>Payback Period (months): <span id="paybackPeriod">0</span></div>
-                <div>NPV: <span id="npv" style="color: green">0</span></div>
-                <div>IRR: <span id="irr" style="color: green">0</span></div>
             </div>
 
             <div id="loading">Loading price data...</div>
@@ -182,27 +179,18 @@
         async function loadPriceData() {
             document.getElementById('loading').style.display = 'block';
             try {
-                const response = await window.fs.readFile('d24.csv');
-                const text = new TextDecoder().decode(response);
-                const result = Papa.parse(text, {
+                const response = await fetch('d24.csv');
+                const text = await response.text();
+                priceData = Papa.parse(text, {
                     header: false,
                     dynamicTyping: true,
-                    skipEmptyLines: true,
-                    delimiter: ','
-                });
-
-                if (result.errors.length > 0) {
-                    console.error('CSV parsing errors:', result.errors);
-                }
-
-                priceData = result.data;
-                console.log('Loaded price data rows:', priceData.length);
-                
+                    skipEmptyLines: true
+                }).data;
                 updateAnalysis();
                 document.getElementById('loading').style.display = 'none';
             } catch (error) {
                 console.error('Error loading CSV:', error);
-                document.getElementById('loading').textContent = 'Error loading price data: ' + error.message;
+                document.getElementById('loading').textContent = 'Error loading price data';
             }
         }
 
@@ -245,11 +233,7 @@
         }
 
         function updateAnalysis() {
-            if (!priceData || !priceData.length) {
-                console.log('No price data available');
-                return;
-            }
-            console.log('Analyzing price data rows:', priceData.length);
+            if (!priceData.length) return;
 
             const minPrice = parseFloat(document.getElementById('minPrice').value);
             const mwePrice = parseFloat(document.getElementById('mWePriceResult').textContent);
@@ -355,15 +339,6 @@
             const totalVAT = monthlyNetVAT.reduce((sum, vat) => sum + vat, 0);
             const reInvestment = monthlyBreakeven[11]; // December's break-even value
 
-            // Calculate financial metrics
-            const initialInvestment = parseFloat(document.getElementById('enginePrice').value) * 
-                                    parseFloat(document.getElementById('engineCount').value) * 1.2;
-            const monthlyNetCashFlows = monthlyRevenue.map(rev => rev);
-            
-            const paybackPeriod = calculatePaybackPeriod(monthlyNetCashFlows, initialInvestment);
-            const npv = calculateNPV(monthlyNetCashFlows, initialInvestment);
-            const irr = calculateIRR(monthlyNetCashFlows, initialInvestment);
-
             // Update display
             document.querySelector('.monthly-summary').innerHTML = '<h3>Monthly Income Summary</h3>';
             document.querySelector('.monthly-summary').appendChild(monthlyTable);
@@ -374,30 +349,8 @@
             document.getElementById('hourCount').textContent = hoursCount;
             document.getElementById('totalIncome').textContent = totalIncome.toFixed(2);
             document.getElementById('totalRevenue').textContent = annualRevenue.toFixed(2);
-            // Calculate Payback Period
-            let paybackMonths = 0;
-            let cumulativeCashFlow = -initialInvestment;
-            for (let i = 0; i < monthlyRevenue.length; i++) {
-                cumulativeCashFlow += monthlyRevenue[i];
-                if (cumulativeCashFlow >= 0) {
-                    paybackMonths = i + 1;
-                    break;
-                }
-            }
-            if (cumulativeCashFlow < 0) {
-                paybackMonths = '>12';
-            }
-
-            // Update displays with color coding
-            const totalVATElement = document.getElementById('totalVAT');
-            totalVATElement.style.color = totalVAT >= 0 ? 'green' : 'red';
-            totalVATElement.textContent = `${totalVAT >= 0 ? '+' : '-'}${Math.abs(totalVAT).toFixed(2)}`;
-            
+            document.getElementById('totalVAT').textContent = `${totalVAT >= 0 ? '+' : '-'}${Math.abs(totalVAT).toFixed(2)}`;
             document.getElementById('reInvestment').textContent = reInvestment <= 0 ? `+${Math.abs(reInvestment).toFixed(2)}` : '0.00';
-            document.getElementById('paybackPeriod').textContent = paybackMonths;
-            document.getElementById('paybackPeriod').textContent = paybackPeriod;
-            document.getElementById('npv').textContent = `${npv >= 0 ? '+' : '-'}${Math.abs(npv).toFixed(2)}`;
-            document.getElementById('irr').textContent = `${(irr * 100).toFixed(2)}%`;
         }
 
         // Add event listeners
