@@ -182,13 +182,15 @@
         async function loadPriceData() {
             document.getElementById('loading').style.display = 'block';
             try {
-                const response = await fetch('d24.csv');
-                const text = await response.text();
+                const response = await window.fs.readFile('d24.csv');
+                const text = new TextDecoder().decode(response);
+                
                 priceData = Papa.parse(text, {
                     header: false,
                     dynamicTyping: true,
                     skipEmptyLines: true
                 }).data;
+                
                 updateAnalysis();
                 document.getElementById('loading').style.display = 'none';
             } catch (error) {
