@@ -179,45 +179,63 @@
             calculateResults();
         }
 
+        function calculateNPV(cashFlows, initialInvestment, rate = 0.10) {
+            let npv = -initialInvestment;
+            cashFlows.forEach((cf, index) => {
+                npv += cf / Math.pow(1 + rate/12, index + 1);  // Monthly rate adjustment
+            });
+            return npv;
+        }
+
+        function calculateIRR(cashFlows, initialInvestment, tolerance = 0.000001) {
+            function npvAtRate(rate) {
+                return calculateNPV(cashFlows, initialInvestment, rate);
+            }
+
+            let low = -0.99;
+            let high = 10;
+            let mid;
+
+            for (let i = 0; i < 100; i++) {  // Maximum iterations
+                mid = (low + high) / 2;
+                let npv = npvAtRate(mid);
+                
+                if (Math.abs(npv) < tolerance) break;
+                
+                if (npv > 0) {
+                    low = mid;
+                } else {
+                    high = mid;
+                }
+            }
+            return mid;
+        }
+
         async function loadPriceData() {
             document.getElementById('loading').style.display = 'block';
             try {
-                // Initialize with demo data if file can't be loaded
-                priceData = [
-                    [57, 57.1, 55.55, 38, 32, 30, 30.1, 65, 200, 246, 246.1, 90, 90.1, 93, 160, 600, 960, 1210, 999, 720, 470, 140, 68, 70]
-                ];
-                
-                // Try to load real data if available
-                if (typeof window !== 'undefined' && window.fs) {
-                    const response = await window.fs.readFile('d24.csv');
-                    const text = new TextDecoder().decode(response);
-                    const result = Papa.parse(text, {
-                        header: false,
-                        dynamicTyping: true,
-                        skipEmptyLines: true,
-                        delimiter: ','
-                    });
-
-                    if (result.data && result.data.length > 0) {
-                        priceData = result.data;
+                const response = await window.fs.readFile('d24.csv', { encoding: 'utf8' });
+                const result = Papa.parse(response, {
+                    header: false,
+                    dynamicTyping: true,
+                    skipEmptyLines: true,
+                    delimiter: ',',
+                    complete: function(results) {
+                        if (results.errors.length > 0) {
+                            console.error('CSV parsing errors:', results.errors);
+                        }
+                        priceData = results.data;
+                        updateAnalysis();
+                        document.getElementById('loading').style.display = 'none';
+                    },
+                    error: function(error) {
+                        console.error('CSV parsing error:', error);
+                        document.getElementById('loading').textContent = 'Error parsing CSV data';
                     }
-                }
-                
-                // Ensure we have 365 days of data
-                while (priceData.length < 365) {
-                    priceData.push([...priceData[0]]);
-                }
-                
-                updateAnalysis();
-                document.getElementById('loading').style.display = 'none';
+                });
             } catch (error) {
                 console.error('Error loading CSV:', error);
-                // Ensure we have 365 days of data even in case of error
-                while (priceData.length < 365) {
-                    priceData.push([...priceData[0]]);
-                }
-                updateAnalysis();
-                document.getElementById('loading').textContent = 'Using sample data';
+                document.getElementById('loading').textContent = 'Error loading CSV file';
             }
         }
 
