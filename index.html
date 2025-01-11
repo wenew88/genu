@@ -184,18 +184,25 @@
             try {
                 const response = await window.fs.readFile('d24.csv');
                 const text = new TextDecoder().decode(response);
-                
-                priceData = Papa.parse(text, {
+                const result = Papa.parse(text, {
                     header: false,
                     dynamicTyping: true,
-                    skipEmptyLines: true
-                }).data;
+                    skipEmptyLines: true,
+                    delimiter: ','
+                });
+
+                if (result.errors.length > 0) {
+                    console.error('CSV parsing errors:', result.errors);
+                }
+
+                priceData = result.data;
+                console.log('Loaded price data rows:', priceData.length);
                 
                 updateAnalysis();
                 document.getElementById('loading').style.display = 'none';
             } catch (error) {
                 console.error('Error loading CSV:', error);
-                document.getElementById('loading').textContent = 'Error loading price data';
+                document.getElementById('loading').textContent = 'Error loading price data: ' + error.message;
             }
         }
 
@@ -238,7 +245,11 @@
         }
 
         function updateAnalysis() {
-            if (!priceData.length) return;
+            if (!priceData || !priceData.length) {
+                console.log('No price data available');
+                return;
+            }
+            console.log('Analyzing price data rows:', priceData.length);
 
             const minPrice = parseFloat(document.getElementById('minPrice').value);
             const mwePrice = parseFloat(document.getElementById('mWePriceResult').textContent);
