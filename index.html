@@ -125,8 +125,11 @@
                 <div>Hours above minimum price: <span id="hourCount">0</span></div>
                 <div>Total Income: <span id="totalIncome">0</span></div>
                 <div>Annual Revenue (after expenses): <span id="totalRevenue">0</span></div>
-                <div>Total VAT: <span id="totalVAT" style="color: green">0</span></div>
+                <div>Total VAT: <span id="totalVAT" style="color: ${totalVAT >= 0 ? 'green' : 'red'}">0</span></div>
                 <div>Re-Investment: <span id="reInvestment" style="color: green">0</span></div>
+                <div>Payback Period (months): <span id="paybackPeriod">0</span></div>
+                <div>NPV: <span id="npv" style="color: green">0</span></div>
+                <div>IRR: <span id="irr" style="color: green">0</span></div>
             </div>
 
             <div id="loading">Loading price data...</div>
@@ -339,6 +342,15 @@
             const totalVAT = monthlyNetVAT.reduce((sum, vat) => sum + vat, 0);
             const reInvestment = monthlyBreakeven[11]; // December's break-even value
 
+            // Calculate financial metrics
+            const initialInvestment = parseFloat(document.getElementById('enginePrice').value) * 
+                                    parseFloat(document.getElementById('engineCount').value) * 1.2;
+            const monthlyNetCashFlows = monthlyRevenue.map(rev => rev);
+            
+            const paybackPeriod = calculatePaybackPeriod(monthlyNetCashFlows, initialInvestment);
+            const npv = calculateNPV(monthlyNetCashFlows, initialInvestment);
+            const irr = calculateIRR(monthlyNetCashFlows, initialInvestment);
+
             // Update display
             document.querySelector('.monthly-summary').innerHTML = '<h3>Monthly Income Summary</h3>';
             document.querySelector('.monthly-summary').appendChild(monthlyTable);
@@ -351,6 +363,9 @@
             document.getElementById('totalRevenue').textContent = annualRevenue.toFixed(2);
             document.getElementById('totalVAT').textContent = `${totalVAT >= 0 ? '+' : '-'}${Math.abs(totalVAT).toFixed(2)}`;
             document.getElementById('reInvestment').textContent = reInvestment <= 0 ? `+${Math.abs(reInvestment).toFixed(2)}` : '0.00';
+            document.getElementById('paybackPeriod').textContent = paybackPeriod;
+            document.getElementById('npv').textContent = `${npv >= 0 ? '+' : '-'}${Math.abs(npv).toFixed(2)}`;
+            document.getElementById('irr').textContent = `${(irr * 100).toFixed(2)}%`;
         }
 
         // Add event listeners
