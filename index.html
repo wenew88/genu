@@ -182,8 +182,10 @@
         async function loadPriceData() {
             document.getElementById('loading').style.display = 'block';
             try {
-                // Initialize empty array for demo if file can't be loaded
-                priceData = [];
+                // Initialize with demo data if file can't be loaded
+                priceData = [
+                    [57, 57.1, 55.55, 38, 32, 30, 30.1, 65, 200, 246, 246.1, 90, 90.1, 93, 160, 600, 960, 1210, 999, 720, 470, 140, 68, 70]
+                ];
                 
                 // Try to load real data if available
                 if (typeof window !== 'undefined' && window.fs) {
@@ -196,21 +198,26 @@
                         delimiter: ','
                     });
 
-                    if (result.errors.length > 0) {
-                        console.error('CSV parsing errors:', result.errors);
+                    if (result.data && result.data.length > 0) {
+                        priceData = result.data;
                     }
-
-                    priceData = result.data;
+                }
+                
+                // Ensure we have 365 days of data
+                while (priceData.length < 365) {
+                    priceData.push([...priceData[0]]);
                 }
                 
                 updateAnalysis();
                 document.getElementById('loading').style.display = 'none';
             } catch (error) {
                 console.error('Error loading CSV:', error);
-                document.getElementById('loading').textContent = 'Using default data';
-                // Initialize with demo data
-                priceData = Array(365).fill().map(() => Array(24).fill(100));
+                // Ensure we have 365 days of data even in case of error
+                while (priceData.length < 365) {
+                    priceData.push([...priceData[0]]);
+                }
                 updateAnalysis();
+                document.getElementById('loading').textContent = 'Using sample data';
             }
         }
 
@@ -271,11 +278,10 @@
         }
 
         function updateAnalysis() {
-            if (!priceData || !priceData.length) {
-                console.log('No price data available');
-                return;
+            if (!priceData || priceData.length === 0) {
+                console.log('Initializing price data');
+                priceData = Array(365).fill().map(() => Array(24).fill(100));
             }
-            console.log('Analyzing price data rows:', priceData.length);
 
             const minPrice = parseFloat(document.getElementById('minPrice').value);
             const mwePrice = parseFloat(document.getElementById('mWePriceResult').textContent);
