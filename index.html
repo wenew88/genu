@@ -3,105 +3,191 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Power Plant Dashboard</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <title>Power Generation Financial Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        body { font-family: Arial; margin: 20px; background: #f5f5f5; }
-        .container { max-width: 1400px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .section { margin-bottom: 30px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
-        label { display: inline-block; width: 200px; font-weight: bold; }
-        input { padding: 5px; width: 150px; margin-bottom: 10px; }
-        select { padding: 5px; width: 200px; margin-bottom: 10px; font-size: 14px; }
-        table { border-collapse: collapse; width: 100%; font-size: 12px; }
-        th, td { border: 1px solid #ddd; padding: 4px; text-align: right; }
-        .highlighted { background-color: #90EE90; }
-        .results { font-weight: bold; margin: 15px 0; }
-        .table-container { overflow-x: auto; max-height: 600px; overflow-y: auto; }
-        .monthly-summary { margin: 20px 0; }
-        .monthly-summary table { width: auto; margin: 10px 0; }
-        .monthly-summary td { padding: 5px 15px; }
-        .monthly-summary h3 { margin: 0 0 10px 0; }
-        #loading { display: none; color: #666; margin: 10px 0; font-style: italic; }
-        .file-upload { margin: 20px 0; padding: 15px; background: #f8f8f8; border-radius: 4px; }
-        .file-upload input { width: auto; }
+        body {
+            background-color: #f8f9fa;
+        }
+        .card {
+            margin: 20px 0;
+        }
+        .chart-container {
+            position: relative;
+            height: 400px;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="file-upload">
-            <h3>Upload Price Data (CSV)</h3>
-            <input type="file" id="csvFile" accept=".csv" onchange="handleFileUpload(event)">
+    <div class="container mt-4">
+        <h1 class="text-center">Power Generation Financial Dashboard</h1>
+        <p class="text-center text-muted">Analyze and visualize key financial metrics for your project</p>
+
+        <!-- Key Metrics Section -->
+        <div class="row text-center">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Net Present Value (NPV)</h5>
+                        <p id="npv" class="card-text text-success">$0.00</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Internal Rate of Return (IRR)</h5>
+                        <p id="irr" class="card-text text-primary">0.00%</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Payback Period</h5>
+                        <p id="payback" class="card-text text-warning">0 years</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">LCOE</h5>
+                        <p id="lcoe" class="card-text text-danger">$0.00/kWh</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <h2>Variables</h2>
-        <!-- Rest of your existing HTML structure remains the same until the script section -->
+        <!-- Charts Section -->
+        <div class="row">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Annual Revenues vs Expenses</h5>
+                        <div class="chart-container">
+                            <canvas id="revenueExpenseChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">Cumulative Cash Flow</h5>
+                        <div class="chart-container">
+                            <canvas id="cashFlowChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-        <script>
-            let priceData = [];
-
-            // Engine specifications remain the same
-            const engineSpecs = {
-                wartsila: {
-                    power: 3000,
-                    name: "Wärtsilä W16V25SG",
-                    ngConsumption: 777,
-                    price: 6000000
-                },
-                dha: {
-                    power: 315,
-                    name: "DHA",
-                    ngConsumption: 84,
-                    price: 2000000
-                },
-                jenbacher: {
-                    power: 2200,
-                    name: "Jenbacher 612",
-                    ngConsumption: 444.30,
-                    price: 5000000
-                }
-            };
-
-            // New file upload handler
-            function handleFileUpload(event) {
-                const file = event.target.files[0];
-                if (file) {
-                    document.getElementById('loading').style.display = 'block';
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const text = e.target.result;
-                        priceData = Papa.parse(text, {
-                            header: false,
-                            dynamicTyping: true,
-                            skipEmptyLines: true
-                        }).data;
-                        updateAnalysis();
-                        document.getElementById('loading').style.display = 'none';
-                    };
-                    reader.readAsText(file);
-                }
-            }
-
-            // Rest of your existing JavaScript functions remain the same, but update the VAT display with color coding
-            function updateAnalysis() {
-                // ... (keep existing code until the VAT display update)
-
-                // Update VAT display with color coding
-                const totalVATElement = document.getElementById('totalVAT');
-                const totalVATValue = monthlyNetVAT.reduce((sum, vat) => sum + vat, 0);
-                totalVATElement.style.color = totalVATValue >= 0 ? 'green' : 'red';
-                totalVATElement.textContent = `${totalVATValue >= 0 ? '+' : '-'}${Math.abs(totalVATValue).toFixed(2)}`;
-
-                // ... (rest of the existing updateAnalysis function)
-            }
-
-            // Add event listeners
-            document.querySelectorAll('input[type="number"]').forEach(input => {
-                input.addEventListener('change', calculateResults);
-            });
-
-            // Initial calculations
-            calculateResults();
-        </script>
+        <!-- Input Section -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Project Parameters</h5>
+                <form id="parametersForm">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="discountRate" class="form-label">Discount Rate (%)</label>
+                            <input type="number" class="form-control" id="discountRate" placeholder="e.g., 10">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="fuelCost" class="form-label">Fuel Cost ($/unit)</label>
+                            <input type="number" class="form-control" id="fuelCost" placeholder="e.g., 0.40">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="projectLifespan" class="form-label">Project Lifespan (years)</label>
+                            <input type="number" class="form-control" id="projectLifespan" placeholder="e.g., 20">
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-primary mt-3" onclick="calculateMetrics()">Calculate</button>
+                </form>
+            </div>
+        </div>
     </div>
+
+    <script>
+        // Sample Data for Charts
+        const revenues = [10000, 12000, 14000, 16000, 18000];
+        const expenses = [8000, 8500, 9000, 9500, 10000];
+        const cumulativeCashFlow = [2000, 4500, 8000, 11500, 15000];
+
+        // Render Revenue vs Expense Chart
+        const revenueExpenseCtx = document.getElementById('revenueExpenseChart').getContext('2d');
+        new Chart(revenueExpenseCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
+                datasets: [
+                    {
+                        label: 'Revenues ($)',
+                        data: revenues,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)'
+                    },
+                    {
+                        label: 'Expenses ($)',
+                        data: expenses,
+                        backgroundColor: 'rgba(255, 99, 132, 0.6)'
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                }
+            }
+        });
+
+        // Render Cumulative Cash Flow Chart
+        const cashFlowCtx = document.getElementById('cashFlowChart').getContext('2d');
+        new Chart(cashFlowCtx, {
+            type: 'line',
+            data: {
+                labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
+                datasets: [
+                    {
+                        label: 'Cumulative Cash Flow ($)',
+                        data: cumulativeCashFlow,
+                        borderColor: 'rgba(54, 162, 235, 0.8)',
+                        borderWidth: 2,
+                        fill: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'top' },
+                }
+            }
+        });
+
+        // Calculate Financial Metrics
+        function calculateMetrics() {
+            const discountRate = parseFloat(document.getElementById('discountRate').value) / 100;
+            const fuelCost = parseFloat(document.getElementById('fuelCost').value);
+            const lifespan = parseInt(document.getElementById('projectLifespan').value);
+
+            // Example calculations (replace with real logic)
+            const npv = revenues.reduce((acc, rev, i) => acc + rev / Math.pow(1 + discountRate, i + 1), 0) - 50000;
+            const irr = ((revenues.reduce((a, b) => a + b, 0) / 50000) * 100).toFixed(2);
+            const payback = revenues.reduce((acc, rev, i) => {
+                acc.sum += rev;
+                if (acc.sum >= 50000 && acc.years === 0) acc.years = i + 1;
+                return acc;
+            }, { sum: 0, years: 0 }).years;
+            const lcoe = (fuelCost * 1000 / lifespan).toFixed(2);
+
+            // Update UI
+            document.getElementById('npv').textContent = `$${npv.toFixed(2)}`;
+            document.getElementById('irr').textContent = `${irr}%`;
+            document.getElementById('payback').textContent = `${payback} years`;
+            document.getElementById('lcoe').textContent = `$${lcoe}/kWh`;
+        }
+    </script>
 </body>
 </html>
