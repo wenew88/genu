@@ -125,11 +125,9 @@
                 <div>Hours above minimum price: <span id="hourCount">0</span></div>
                 <div>Total Income: <span id="totalIncome">0</span></div>
                 <div>Annual Revenue (after expenses): <span id="totalRevenue">0</span></div>
-                <div>Total VAT: <span id="totalVAT" style="color: ${totalVAT >= 0 ? 'green' : 'red'}">0</span></div>
+                <div>Total VAT: <span id="totalVAT" style="color: green">0</span></div>
                 <div>Re-Investment: <span id="reInvestment" style="color: green">0</span></div>
-                <div>Payback Period (months): <span id="paybackPeriod">0</span></div>
-                <div>NPV: <span id="npv" style="color: green">0</span></div>
-                <div>IRR: <span id="irr" style="color: green">0</span></div>
+                <div>Payback Period: <span id="paybackPeriod">0</span> months</div>
             </div>
 
             <div id="loading">Loading price data...</div>
@@ -314,7 +312,7 @@
 
             // Update monthly summary table with break-even column
             monthlyIncome.forEach((income, index) => {
-                const monthName = new Date(2024, index).toLocaleString('default', { month: 'long' });
+               	const monthName = new Date(2024, index).toLocaleString('default', { month: 'long' });
                 const revenue = monthlyRevenue[index];
                 const breakeven = monthlyBreakeven[index];
                 const monthWorkingHours = hoursAboveMinPricePerMonth[index] || 0;
@@ -342,6 +340,23 @@
             const totalVAT = monthlyNetVAT.reduce((sum, vat) => sum + vat, 0);
             const reInvestment = monthlyBreakeven[11]; // December's break-even value
 
+            // Calculate payback period
+            let paybackPeriod = 0;
+            const initialInvestment = parseFloat(document.getElementById('investmentResult').textContent);
+            let cumulativeCashFlow = -initialInvestment;
+            
+            for (let i = 0; i < monthlyRevenue.length; i++) {
+                cumulativeCashFlow += monthlyRevenue[i];
+                if (cumulativeCashFlow >= 0) {
+                    paybackPeriod = i + 1;
+                    break;
+                }
+            }
+            
+            if (cumulativeCashFlow < 0) {
+                paybackPeriod = ">12";
+            }
+
             // Update display
             document.querySelector('.monthly-summary').innerHTML = '<h3>Monthly Income Summary</h3>';
             document.querySelector('.monthly-summary').appendChild(monthlyTable);
@@ -354,6 +369,7 @@
             document.getElementById('totalRevenue').textContent = annualRevenue.toFixed(2);
             document.getElementById('totalVAT').textContent = `${totalVAT >= 0 ? '+' : '-'}${Math.abs(totalVAT).toFixed(2)}`;
             document.getElementById('reInvestment').textContent = reInvestment <= 0 ? `+${Math.abs(reInvestment).toFixed(2)}` : '0.00';
+            document.getElementById('paybackPeriod').textContent = paybackPeriod;
         }
 
         // Add event listeners
