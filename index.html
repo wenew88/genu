@@ -163,6 +163,27 @@
             </div>
         </div>
 
+        <!-- Visualization Section -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Price Table</h5>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Day</th>
+                            <th>Hour 1</th>
+                            <th>Hour 2</th>
+                            <th>...</th>
+                            <th>Hour 24</th>
+                        </tr>
+                    </thead>
+                    <tbody id="priceTable">
+                        <!-- Rows populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <script>
             const engineData = {
                 "DHA": { power: 315, consumption: 84, price: 2000000 },
@@ -182,6 +203,7 @@
                 const numberOfEngines = parseInt(document.getElementById('numberOfEngines').value);
                 const load = parseFloat(document.getElementById('loadPercentage').value) / 100;
                 const gasPrice = parseFloat(document.getElementById('gasPrice').value);
+		parseFloat(document.getElementById('gasPrice').value);
                 const engineType = document.getElementById('engineType').value;
                 const engine = engineData[engineType];
 
@@ -198,11 +220,35 @@
                 document.getElementById('pricePerMWe').textContent = `$${pricePerMWe.toFixed(2)}`;
             }
 
-            document.getElementById('userInputForm').addEventListener('change', calculateMetrics);
-            document.getElementById('monthlyCostsForm').addEventListener('change', calculateMetrics);
+            function loadPriceTable() {
+                fetch('./d24.csv')
+                    .then(response => response.text())
+                    .then(data => {
+                        const rows = data.split('\n');
+                        const tableBody = document.getElementById('priceTable');
+                        rows.forEach((row, index) => {
+                            const cols = row.split(',');
+                            const tableRow = document.createElement('tr');
+                            const dayCell = document.createElement('td');
+                            dayCell.textContent = `Day ${index + 1}`;
+                            tableRow.appendChild(dayCell);
+                            cols.forEach(col => {
+                                const cell = document.createElement('td');
+                                cell.textContent = col;
+                                tableRow.appendChild(cell);
+                            });
+                            tableBody.appendChild(tableRow);
+                        });
+                    });
+            }
 
-            updateEngineDetails();
-            calculateMetrics();
+            function initializeDashboard() {
+                updateEngineDetails();
+                calculateMetrics();
+                loadPriceTable();
+            }
+
+            window.onload = initializeDashboard;
         </script>
     </div>
 </body>
