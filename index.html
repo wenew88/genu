@@ -125,7 +125,7 @@
                 <div>Hours above minimum price: <span id="hourCount">0</span></div>
                 <div>Total Income: <span id="totalIncome">0</span></div>
                 <div>Annual Revenue (after expenses): <span id="totalRevenue">0</span></div>
-                <div>Total VAT: <span id="totalVAT" style="color: green">0</span></div>
+                <div>Total VAT: <span id="totalVAT">0</span></div>
                 <div>Re-Investment: <span id="reInvestment" style="color: green">0</span></div>
                 <div>Payback Period: <span id="paybackPeriod">0</span> months</div>
             </div>
@@ -312,7 +312,7 @@
 
             // Update monthly summary table with break-even column
             monthlyIncome.forEach((income, index) => {
-               	const monthName = new Date(2024, index).toLocaleString('default', { month: 'long' });
+                const monthName = new Date(2024, index).toLocaleString('default', { month: 'long' });
                 const revenue = monthlyRevenue[index];
                 const breakeven = monthlyBreakeven[index];
                 const monthWorkingHours = hoursAboveMinPricePerMonth[index] || 0;
@@ -367,7 +367,17 @@
             document.getElementById('hourCount').textContent = hoursCount;
             document.getElementById('totalIncome').textContent = totalIncome.toFixed(2);
             document.getElementById('totalRevenue').textContent = annualRevenue.toFixed(2);
-            document.getElementById('totalVAT').textContent = `${totalVAT >= 0 ? '+' : '-'}${Math.abs(totalVAT).toFixed(2)}`;
+            
+            const totalVATElement = document.getElementById('totalVAT');
+            if (totalVAT < 0) {
+                totalVATElement.style.color = 'red';
+            } else if (totalVAT === 0) {
+                totalVATElement.style.color = 'black';
+            } else {
+                totalVATElement.style.color = 'green';
+            }
+            totalVATElement.textContent = `${totalVAT >= 0 ? '+' : '-'}${Math.abs(totalVAT).toFixed(2)}`;
+            
             document.getElementById('reInvestment').textContent = reInvestment <= 0 ? `+${Math.abs(reInvestment).toFixed(2)}` : '0.00';
             document.getElementById('paybackPeriod').textContent = paybackPeriod;
         }
