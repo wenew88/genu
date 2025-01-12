@@ -17,6 +17,15 @@
             position: relative;
             height: 400px;
         }
+        .highlight-green {
+            color: green;
+        }
+        .highlight-red {
+            color: red;
+        }
+        .highlight-black {
+            color: black;
+        }
     </style>
 </head>
 <body>
@@ -24,170 +33,177 @@
         <h1 class="text-center">Power Generation Financial Dashboard</h1>
         <p class="text-center text-muted">Analyze and visualize key financial metrics for your project</p>
 
-        <!-- Key Metrics Section -->
-        <div class="row text-center">
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Net Present Value (NPV)</h5>
-                        <p id="npv" class="card-text text-success">$0.00</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Internal Rate of Return (IRR)</h5>
-                        <p id="irr" class="card-text text-primary">0.00%</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Payback Period</h5>
-                        <p id="payback" class="card-text text-warning">0 years</p>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">LCOE</h5>
-                        <p id="lcoe" class="card-text text-danger">$0.00/kWh</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Charts Section -->
-        <div class="row">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Annual Revenues vs Expenses</h5>
-                        <div class="chart-container">
-                            <canvas id="revenueExpenseChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h5 class="card-title">Cumulative Cash Flow</h5>
-                        <div class="chart-container">
-                            <canvas id="cashFlowChart"></canvas>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Input Section -->
+        <!-- Data Sources -->
         <div class="card">
             <div class="card-body">
-                <h5 class="card-title">Project Parameters</h5>
-                <form id="parametersForm">
+                <h5 class="card-title">Data Sources</h5>
+                <ul>
+                    <li><b>Electricity Prices:</b> Hourly prices in <code>d24.csv</code> (365 rows × 24 columns).</li>
+                    <li><b>Engines:</b>
+                        <ul>
+                            <li><b>Wärtsilä W16V25SG:</b> Power: 3000 kWe, NG Consumption: 777 m³, Price: $6,000,000</li>
+                            <li><b>DHA:</b> Power: 315 kWe, NG Consumption: 84 m³, Price: $2,000,000</li>
+                            <li><b>Jenbacher 612:</b> Power: 2200 kWe, NG Consumption: 444.30 m³, Price: $5,000,000</li>
+                        </ul>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- User Input Section -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">User Input</h5>
+                <form id="userInputForm">
                     <div class="row">
                         <div class="col-md-4">
-                            <label for="discountRate" class="form-label">Discount Rate (%)</label>
-                            <input type="number" class="form-control" id="discountRate" placeholder="e.g., 10">
+                            <label for="engineType" class="form-label">Engine Type</label>
+                            <select id="engineType" class="form-select" onchange="updateEngineDetails()">
+                                <option value="DHA">DHA</option>
+                                <option value="Wartsila">Wärtsilä W16V25SG</option>
+                                <option value="Jenbacher">Jenbacher 612</option>
+                            </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="fuelCost" class="form-label">Fuel Cost ($/unit)</label>
-                            <input type="number" class="form-control" id="fuelCost" placeholder="e.g., 0.40">
+                            <label for="numberOfEngines" class="form-label">Number of Engines</label>
+                            <input type="number" id="numberOfEngines" class="form-control" value="1">
                         </div>
                         <div class="col-md-4">
-                            <label for="projectLifespan" class="form-label">Project Lifespan (years)</label>
-                            <input type="number" class="form-control" id="projectLifespan" placeholder="e.g., 20">
+                            <label for="loadPercentage" class="form-label">Load %</label>
+                            <input type="number" id="loadPercentage" class="form-control" value="90">
                         </div>
                     </div>
-                    <button type="button" class="btn btn-primary mt-3" onclick="calculateMetrics()">Calculate</button>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <label for="gasPrice" class="form-label">Gas Price per m³ ($)</label>
+                            <input type="number" id="gasPrice" class="form-control" value="16.5">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="enginePrice" class="form-label">Engine Price ($)</label>
+                            <input type="text" id="enginePrice" class="form-control" readonly>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="ngConsumption" class="form-label">NG Consumption (m³)</label>
+                            <input type="text" id="ngConsumption" class="form-control" readonly>
+                        </div>
+                    </div>
                 </form>
             </div>
         </div>
+
+        <!-- Monthly Costs Section -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Monthly Costs</h5>
+                <form id="monthlyCostsForm">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <label for="oilCost" class="form-label">Oil Cost ($)</label>
+                            <input type="number" id="oilCost" class="form-control" value="32800">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="serviceCost" class="form-label">Service and Parts ($)</label>
+                            <input type="number" id="serviceCost" class="form-control" value="41000">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="workerCost" class="form-label">Worker Salaries ($)</label>
+                            <input type="number" id="workerCost" class="form-control" value="49200">
+                        </div>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-4">
+                            <label for="salaryTaxes" class="form-label">Salary Taxes (22%) ($)</label>
+                            <input type="number" id="salaryTaxes" class="form-control" value="10824">
+                        </div>
+                        <div class="col-md-4">
+                            <label for="otherExpenses" class="form-label">Other Expenses ($)</label>
+                            <input type="number" id="otherExpenses" class="form-control" value="61500">
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Calculations & Results Section -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Calculations & Results</h5>
+                <div id="results" class="mt-3">
+                    <p><b>Generation kWe:</b> <span id="generationKWe">0</span></p>
+                    <p><b>Consumption m³:</b> <span id="consumptionM3">0</span></p>
+                    <p><b>Investment +20%:</b> <span id="investment20">0</span></p>
+                    <p><b>1 kWe Price:</b> <span id="pricePerKWe">0</span></p>
+                    <p><b>1 MWe Price:</b> <span id="pricePerMWe">0</span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monthly Summary Table -->
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Monthly Summary</h5>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Month</th>
+                            <th>kWe Sold</th>
+                            <th>Gas Cost</th>
+                            <th>Gas VAT</th>
+                            <th>Electricity VAT</th>
+                            <th>Net VAT</th>
+                            <th>Income</th>
+                            <th>Revenue</th>
+                            <th>Break-even</th>
+                        </tr>
+                    </thead>
+                    <tbody id="monthlySummary">
+                        <!-- Rows populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <script>
+            const engineData = {
+                "DHA": { power: 315, consumption: 84, price: 2000000 },
+                "Wartsila": { power: 3000, consumption: 777, price: 6000000 },
+                "Jenbacher": { power: 2200, consumption: 444.3, price: 5000000 }
+            };
+
+            function updateEngineDetails() {
+                const engineType = document.getElementById('engineType').value;
+                const engine = engineData[engineType];
+
+                document.getElementById('enginePrice').value = engine.price;
+                document.getElementById('ngConsumption').value = engine.consumption;
+            }
+
+            function calculateMetrics() {
+                const numberOfEngines = parseInt(document.getElementById('numberOfEngines').value);
+                const load = parseFloat(document.getElementById('loadPercentage').value) / 100;
+                const gasPrice = parseFloat(document.getElementById('gasPrice').value);
+                const engineType = document.getElementById('engineType').value;
+                const engine = engineData[engineType];
+
+                const generationKWe = engine.power * load * numberOfEngines;
+                const consumptionM3 = engine.consumption * load * numberOfEngines;
+                const investment20 = engine.price * numberOfEngines * 1.2;
+                const pricePerKWe = (engine.consumption * gasPrice) / engine.power;
+                const pricePerMWe = pricePerKWe * 1000;
+
+                document.getElementById('generationKWe').textContent = generationKWe.toFixed(2);
+                document.getElementById('consumptionM3').textContent = consumptionM3.toFixed(2);
+                document.getElementById('investment20').textContent = `$${investment20.toFixed(2)}`;
+                document.getElementById('pricePerKWe').textContent = `$${pricePerKWe.toFixed(2)}`;
+                document.getElementById('pricePerMWe').textContent = `$${pricePerMWe.toFixed(2)}`;
+            }
+
+            document.getElementById('userInputForm').addEventListener('change', calculateMetrics);
+            document.getElementById('monthlyCostsForm').addEventListener('change', calculateMetrics);
+
+            updateEngineDetails();
+            calculateMetrics();
+        </script>
     </div>
-
-    <script>
-        // Sample Data for Charts
-        const revenues = [10000, 12000, 14000, 16000, 18000];
-        const expenses = [8000, 8500, 9000, 9500, 10000];
-        const cumulativeCashFlow = [2000, 4500, 8000, 11500, 15000];
-
-        // Render Revenue vs Expense Chart
-        const revenueExpenseCtx = document.getElementById('revenueExpenseChart').getContext('2d');
-        new Chart(revenueExpenseCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
-                datasets: [
-                    {
-                        label: 'Revenues ($)',
-                        data: revenues,
-                        backgroundColor: 'rgba(75, 192, 192, 0.6)'
-                    },
-                    {
-                        label: 'Expenses ($)',
-                        data: expenses,
-                        backgroundColor: 'rgba(255, 99, 132, 0.6)'
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' },
-                }
-            }
-        });
-
-        // Render Cumulative Cash Flow Chart
-        const cashFlowCtx = document.getElementById('cashFlowChart').getContext('2d');
-        new Chart(cashFlowCtx, {
-            type: 'line',
-            data: {
-                labels: ['Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5'],
-                datasets: [
-                    {
-                        label: 'Cumulative Cash Flow ($)',
-                        data: cumulativeCashFlow,
-                        borderColor: 'rgba(54, 162, 235, 0.8)',
-                        borderWidth: 2,
-                        fill: false
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'top' },
-                }
-            }
-        });
-
-        // Calculate Financial Metrics
-        function calculateMetrics() {
-            const discountRate = parseFloat(document.getElementById('discountRate').value) / 100;
-            const fuelCost = parseFloat(document.getElementById('fuelCost').value);
-            const lifespan = parseInt(document.getElementById('projectLifespan').value);
-
-            // Example calculations (replace with real logic)
-            const npv = revenues.reduce((acc, rev, i) => acc + rev / Math.pow(1 + discountRate, i + 1), 0) - 50000;
-            const irr = ((revenues.reduce((a, b) => a + b, 0) / 50000) * 100).toFixed(2);
-            const payback = revenues.reduce((acc, rev, i) => {
-                acc.sum += rev;
-                if (acc.sum >= 50000 && acc.years === 0) acc.years = i + 1;
-                return acc;
-            }, { sum: 0, years: 0 }).years;
-            const lcoe = (fuelCost * 1000 / lifespan).toFixed(2);
-
-            // Update UI
-            document.getElementById('npv').textContent = `$${npv.toFixed(2)}`;
-            document.getElementById('irr').textContent = `${irr}%`;
-            document.getElementById('payback').textContent = `${payback} years`;
-            document.getElementById('lcoe').textContent = `$${lcoe}/kWh`;
-        }
-    </script>
 </body>
 </html>
